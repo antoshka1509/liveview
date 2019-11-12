@@ -2,10 +2,15 @@
     class Img {
         private $bg_img;
         private $cache_file;
+        private $src_folder;
+        private $tmp_folder;
         
-        public function __construct() {
-            $this->bg_img = __DIR__."/../src/bg.png";
-            $this->cache_file = __DIR__."/../tmp/cache.json";
+        public function __construct($src_folder, $tmp_folder) {
+            $this->src_folder = $src_folder;
+            $this->tmp_folder = $tmp_folder;
+            
+            $this->bg_img = $this->src_folder."/bg.png";
+            $this->cache_file = $this->tmp_folder."/cache.json";
         }
         
         public function draw($url, $name, $test=false) {
@@ -31,10 +36,10 @@
             $font_size = 30;
             $x = $pos[0] + 250;
             $y = $pos[1] + (200+$font_size)/2;
-            imagettftext($out, $font_size, 0, $x, $y, $color, __DIR__."/../src/font.ttf", $name);
+            imagettftext($out, $font_size, 0, $x, $y, $color, $this->src_folder."/font.ttf", $name);
             
             
-            $output = __DIR__."/../tmp/t.jpg";
+            $output = $this->tmp_folder."/t.jpg";
             if ($test) {
                 return imagejpeg($out);
             }
@@ -42,7 +47,7 @@
             return $output;
         }
         private function download($url) {
-            $file = __DIR__."/../tmp/tmp.jpg";
+            $file = $this->tmp_folder."/tmp.jpg";
             
             $data = file_get_contents($url);
             file_put_contents($file, $data);

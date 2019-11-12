@@ -3,9 +3,9 @@
     require_once(__DIR__."/lib/img.php");
     
     class core {
-        private $token = ""; //VK TOKEN
-        private $secret = ""; //VK SECRET
-        private $confirmation = ""; //VK CONFIRM
+        private $token = "VK TOKEN";
+        private $secret = "VK SECRET";
+        private $confirmation = "VK CONFIRM";
         private $answer = "ok";
         private $vk;
         
@@ -73,7 +73,10 @@
             }
         }
         private function setNewImage($group_id, $url, $name) {
-            $img = new Img();
+            $src_folder = __DIR__."/src";
+            $tmp_folder = __DIR__."/tmp";
+            
+            $img = new Img($src_folder, $tmp_folder);
             $file = $img->draw($url, $name);
             
             $params = array(
