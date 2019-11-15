@@ -1,0 +1,11 @@
+{
+    "require": {
+        "vkcom/vk-php-sdk": "^5.101"
+    },
+    "autoload" : {
+        "files": [
+            "core.php",
+            "img.php"
+        ]
+    }
+}

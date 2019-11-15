@@ -1,46 +1,23 @@
 <?php
-    require_once(__DIR__."/lib/vk/vk.php");
-    require_once(__DIR__."/lib/img.php");
-    
-    class core {
-        private $token = "VK TOKEN";
-        private $secret = "VK SECRET";
-        private $confirmation = "VK CONFIRM";
-        private $answer = "ok";
+    require_once(__DIR__."/vendor/autoload.php");
+    use VK\Client\VKApiClient;
+
+    class Core {
+        private $access_token = '05c7d862ff0ffe1dcced37086a48678517571a497519bbf1dc5cbe7dc6a6632eff49cd2ddc5c06c01c291';
         private $vk;
         
-        public function __construct($data) {
-            
-            if ($data->secret!=$this->secret) return $this->exception(0);
-            
-            if ($data->type=="confirmation") {
-                $this->answer = $this->confirmation;
-            }
-            elseif ($data->type=="group_join") {
-                $this->vk = new VK($this->token);
-                $this->groupJoin($data);
-            }
-            elseif ($data->type=="message_new") {
-                $this->vk = new VK($this->token);
-                $this->messageNew($data);
-            }
+        function __construct() {
+            $this->vk = new VKApiClient();
         }
-        private function groupJoin($data) {
-            $id = $data->object->user_id;
-            $group_id = $data->group_id;
+        public function groupJoin($group_id, $object) {
+            $id = $object['user_id'];
+            $user_info = $this->getUserInfo($id);
             
-            $params = array(
-                "user_ids" => $id,
-                "fields" => "photo_200"
-            );
-            $dat = $this->vk->users->get($params);
-            
-            $this->setNewImage($group_id, $dat->response[0]->photo_200, $dat->response[0]->first_name . " " . $dat->response[0]->last_name);
+            return $this->setNewImage($group_id, $user_info[0]['photo_200'], $user_info[0]['first_name'] . " " . $user_info[0]['last_name']);
         }
-        private function messageNew($data) {
-            $url = $data->object->message->text;
-            $user_id = $data->object->message->from_id;
-            $group_id = $data->group_id;
+        public function messageNew($group_id, $object) {
+            $url = $object['message']->text;
+            $user_id = $object['message']->from_id;
             
             $id = explode("/", $url);
             $id = $id[count($id)-1];
@@ -50,15 +27,16 @@
                     "user_ids" => $id,
                     "fields" => "photo_200"
                 );
-                $dat = $this->vk->users->get($params);
-                $this->setNewImage($group_id, $dat->response[0]->photo_200, $dat->response[0]->first_name . " " . $dat->response[0]->last_name);
+                $dat = $this->vk->users()->get($this->access_token, $params);
+                //print_r($dat[0]); return;
+                $this->setNewImage($group_id, $dat[0]['photo_200'], $dat[0]['first_name'] . " " . $dat[0]['last_name']);
                 
                 $params = array(
                     "random_id" => rand(),
                     "user_id" => $user_id,
                     "message" => "ok"
                 );
-                $this->vk->messages->send($params);
+                $this->vk->messages()->send($this->access_token, $params);
             }
             catch (Exception $e) {
                 try {
@@ -67,7 +45,7 @@
                         "user_id" => $user_id,
                         "message" => "User not found"
                     );
-                    $this->vk->messages->send($params);
+                    $this->vk->messages()->send($this->access_token, $params);
                 }
                 catch (Exception $e) {}
             }
@@ -77,7 +55,8 @@
             $tmp_folder = __DIR__."/tmp";
             
             $img = new Img($src_folder, $tmp_folder);
-            $file = $img->draw($url, $name);
+            
+            $file = $img->draw($src_folder."/bg.png", $url, $name);
             
             $params = array(
                 "group_id" => $group_id,
@@ -86,29 +65,19 @@
                 "crop_x2" => 1590,
                 "crop_y2" => 400
             );
-            $upload_url = $this->vk->photos->getOwnerCoverPhotoUploadServer($params)->response->upload_url;
             
-            $response = $this->vk->requestPost($upload_url, null, array("photo"=>$file));
+            $address = $this->vk->photos()->getOwnerCoverPhotoUploadServer($this->access_token, $params);
             
-            $params = array(
-                "hash" => $response->hash,
-                "photo" => $response->photo
-            );
+            $photo = $this->vk->getRequest()->upload($address['upload_url'], 'photo', $file);
             
-            return $this->vk->photos->saveOwnerCoverPhoto($params);
+            return $this->vk->photos()->saveOwnerCoverPhoto($this->access_token, $photo);
         }
-        public function answer() {
-            return $this->answer;
-        }
-        private function exception($code) {
-            $codes = ["Bad secret code"];
-            
-            if ($codes[$code]=="") {
-                throw new Exception("Unknown error");
-            }
-            else {
-                throw new Exception($codes[$code]);
-            }
+        private function getUserInfo($id) {
+            $response = $this->vk->users()->get($this->access_token, array(
+                'user_ids' => $id,
+                'fields' => array('photo_200'),
+            ));
+            return $response;
         }
     }
 ?>
